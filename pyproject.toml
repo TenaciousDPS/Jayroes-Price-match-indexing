@@ -1,0 +1,28 @@
+[project]
+name = "jayroes_price_tool"
+description = "Reads price changes from supplier and matches to POS inventory"
+requires-python = ">=3.12"
+version = "0.0.1"
+
+dependencies = [
+  "openpyxl",
+  "pyyaml"
+]
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "isort",
+  "pyright",
+  "pytest",
+  "pytest-asyncio",
+  "autoflake",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--doctest-modules"

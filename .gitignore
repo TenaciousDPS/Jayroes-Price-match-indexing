@@ -1,0 +1,6 @@
+files/*
+venv/*
+*/build/*
+*.egg-info/
+**/__pycache__/
+public/

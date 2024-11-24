@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -eu
+
+__cmd__="$(basename "$0")"
+pyver=3.12
+venv=venv
+py="python$pyver"
+
+help_msg() {
+cat <<HELP_MSG
+usage: $__cmd__
+
+Setup virtual environment at "$venv/", and install this project.
+HELP_MSG
+}
+
+if [[ "$*" == *"--help"* ]] ; then help_msg ; exit ; fi
+if [ "$#" -ne 0 ] ; then help_msg ; exit 1 ; fi
+
+info() {
+  printf '%s\n' "$@" >&2
+}
+
+err() {
+  printf 'ERROR: %s\n' "$@" >&2
+}
+
+# The python version check is "dumb" and assumes we'd always simply reference
+# the same version everywhere: the Dockerfile, pyproject.toml, and here.
+if ! grep -q "requires-python.*${pyver/./\.}" pyproject.toml ;  then
+  err "pyproject.toml does not appear to match expected python version $pyver"
+  exit 1
+fi
+
+if [ ! -e "$venv" ] ; then
+  "$py" -m venv "$venv" --prompt 'Dapper PG'
+fi
+
+$venv/bin/pip install -e ".[dev]"
+
