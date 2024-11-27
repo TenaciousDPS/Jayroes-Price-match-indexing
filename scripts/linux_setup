@@ -33,7 +33,7 @@ if ! grep -q "requires-python.*${pyver/./\.}" pyproject.toml ;  then
 fi
 
 if [ ! -e "$venv" ] ; then
-  "$py" -m venv "$venv" --prompt 'Dapper PG'
+  "$py" -m venv "$venv" --prompt 'JPriceTool'
 fi
 
 $venv/bin/pip install -e ".[dev]"

@@ -68,7 +68,6 @@ def read_file(filepath: pathlib.Path):
 
     cols = TABLE_START[0], TABLE_START[0] + len(dataclasses.fields(Product))
     row_num = TABLE_START[1]
-    cost_index = dataclass_field_indexes(Product)["cost"]
 
     for row in worksheet.iter_rows(
         min_row=row_num,

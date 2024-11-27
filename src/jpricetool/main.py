@@ -2,8 +2,9 @@ import pathlib
 import dataclasses
 import logging
 from typing import Iterable
+import sys
 
-import json
+import yaml
 
 
 from .point_of_sale import read_file as read_pos_file, Product
@@ -86,13 +87,13 @@ def main(args: Args):
 
     matching_records = [f for f in match_records(change_records, pos_records)]
 
-    write_report(args.outdir / "verbose_report.json", matching_records, verbose=True)
-    logging.info(f"Created verbose report @ {str(args.outdir / 'verbose_report.json')}")
+    write_report(args.outdir / "verbose_report.yaml", matching_records, verbose=True)
+    logging.info(f"Created verbose report @ {str(args.outdir / 'verbose_report.yaml')}")
 
-    write_report(args.outdir / "minimal_report.json", matching_records, verbose=False)
-    logging.info(f"Created minimal report @ {str(args.outdir / 'minimal_report.json')}")
+    write_report(args.outdir / "minimal_report.yaml", matching_records, verbose=False)
+    logging.info(f"Created minimal report @ {str(args.outdir / 'minimal_report.yaml')}")
 
-    missing_suggested_retail = args.outdir / "no_suggested_retail.json"
+    missing_suggested_retail = args.outdir / "no_suggested_retail.yaml"
     if missing_retail := [
         m for m in matching_records if not m.pricechange_record.suggested_retail
     ]:
@@ -136,18 +137,12 @@ class MatchRecord:
                 "price": self.revel_record.price,
             },
             "change_details": {
-                "3": {
-                    "mult_3": self.pricechange_record.mult_3,
-                    "cost_3": self.pricechange_record.cost_3,
-                },
-                "2": {
-                    "mult_2": self.pricechange_record.mult_3,
-                    "cost_3": self.pricechange_record.cost_3,
-                },
-                "1": {
-                    "mult_1": self.pricechange_record.mult_3,
-                    "cost_1": self.pricechange_record.cost_3,
-                },
+                "mult_3": self.pricechange_record.mult_3,
+                "cost_3": self.pricechange_record.cost_3,
+                "mult_2": self.pricechange_record.mult_3,
+                "cost_3": self.pricechange_record.cost_3,
+                "mult_1": self.pricechange_record.mult_3,
+                "cost_1": self.pricechange_record.cost_3,
                 "member_retail": self.pricechange_record.member_retail,
                 "suggested_retail": self.pricechange_record.suggested_retail,
                 "suggested_aux_retail": self.pricechange_record.suggested_aux_retail,
@@ -198,15 +193,17 @@ class MatchRecord:
 
     @staticmethod
     def format(record: "MatchRecord", verbose: bool):
-        result = {
-            "upc": record.upc,
-            "sku": record.sku,
-            "sku_matches": record.sku_matches,
+        price_info = record.verbose_price_info() if verbose else record.minimal_price_info()
+        maybe_change_sku = {"dib_sku": record.pricechange_record.sku} if not record.sku_matches else {}
+
+        return {
+            record.upc: {
+                "sku": record.sku,
+                "sku_matches": record.sku_matches,
+                **maybe_change_sku,
+                **price_info,
+            }
         }
-        if verbose:
-            return {**result, **record.verbose_price_info()}
-        else:
-            return {**result, **record.minimal_price_info()}
 
 
 def match_records(change_records: list[PriceChangeRecord], pos_records: list[Product]):
@@ -232,8 +229,18 @@ def match_records(change_records: list[PriceChangeRecord], pos_records: list[Pro
 
 
 def write_report(filepath: pathlib.Path, matches: Iterable[MatchRecord], verbose: bool):
-    with open(filepath, "w") as f:
-        json.dump([MatchRecord.format(m, verbose) for m in matches], f, indent=4)
+    if not matches:
+        logger.info("No matches found. This probably means none of the supplier's changed items are in your inventory.")
+        logger.info("Exiting.")
+        sys.exit(0)
+
+    matches_dict = {
+        k: v
+        for d in [MatchRecord.format(m, verbose) for m in matches]
+        for k, v in d.items()
+    }
+    with filepath.open('w') as f:
+        yaml.dump(matches_dict, f, indent=8, sort_keys=False)
 
 
 if __name__ == "__main__":
